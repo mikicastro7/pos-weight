@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor de Peso - WebSocket</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+        
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .weight-display {
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 50px 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .weight-value {
+            font-size: 72px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .weight-unit {
+            font-size: 24px;
+            opacity: 0.9;
+        }
+        
+        .timestamp {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #004085;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚖️ Monitor de Peso en Tiempo Real</h1>
+        
+        <div id="status" class="status disconnected">
+            🔴 Desconectado
+        </div>
+        
+        <div class="weight-display">
+            <div class="weight-label">Peso Estable</div>
+            <div class="weight-value" id="weight">--</div>
+            <div class="weight-unit">kg</div>
+        </div>
+        
+        <div class="timestamp" id="timestamp">
+            Esperando datos...
+        </div>
+        
+        <div class="info">
+            💡 <strong>Nota:</strong> El peso se muestra solo cuando se mantiene estable por 0.3 segundos.
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Conectar al servidor WebSocket
+        const socket = io('http://localhost:3000');
+        
+        const statusEl = document.getElementById('status');
+        const weightEl = document.getElementById('weight');
+        const timestampEl = document.getElementById('timestamp');
+        
+        // Evento de conexión
+        socket.on('connect', () => {
+            console.log('✅ Conectado al servidor WebSocket');
+            statusEl.textContent = '🟢 Conectado';
+            statusEl.className = 'status connected';
+        });
+        
+        // Evento de desconexión
+        socket.on('disconnect', () => {
+            console.log('❌ Desconectado del servidor WebSocket');
+            statusEl.textContent = '🔴 Desconectado';
+            statusEl.className = 'status disconnected';
+        });
+        
+        // Recibir peso estable
+        socket.on('stableWeight', (data) => {
+            console.log('📦 Peso recibido:', data);
+            
+            // Actualizar el peso en la pantalla
+            weightEl.textContent = data.weight.toFixed(3);
+            
+            // Actualizar timestamp
+            const date = new Date(data.timestamp);
+            timestampEl.textContent = `Última actualización: ${date.toLocaleTimeString('es-ES')}`;
+            
+            // Animación de actualización
+            weightEl.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                weightEl.style.transform = 'scale(1)';
+            }, 200);
+        });
+        
+        // Transición suave para el peso
+        weightEl.style.transition = 'transform 0.2s ease';
+    </script>
+</body>
+</html>
