@@ -4,6 +4,16 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 
+// Configuración de logging
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
+// Función de logging condicional
+const log = {
+    info: (...args) => isDevelopment && console.log(...args),
+    error: (...args) => console.error(...args), // Errores siempre se muestran
+    warn: (...args) => isDevelopment && console.warn(...args),
+};
+
 // Configuración del servidor Express y Socket.IO
 const app = express();
 app.use(cors());
@@ -42,12 +52,12 @@ let stabilityTimer = null;
 const STABILITY_DELAY = 5; // 0.3 segundos en milisegundos
 
 port.on('open', () => {
-    console.log(`✅ Puerto serie abierto en ${PORT_NAME}`);
-    console.log('Leyendo tramas de la balanza...\n');
+    log.info(`✅ Puerto serie abierto en ${PORT_NAME}`);
+    log.info('Leyendo tramas de la balanza...\n');
 });
 
 port.on('error', (err) => {
-    console.error('❌ Error en el puerto serie:', err.message);
+    log.error('❌ Error en el puerto serie:', err.message);
 });
 
 port.on('data', (data) => {
@@ -76,7 +86,7 @@ function processFrame(frame) {
 
     const match = frame.match(/([-+]?\d+(\.\d+)?)/);
     if (!match) {
-        console.log('⚠️  No se ha encontrado número en la trama.\n');
+        log.warn('⚠️  No se ha encontrado número en la trama.\n');
         return;
     }
 
@@ -85,7 +95,7 @@ function processFrame(frame) {
     // Solo mostramos si cambia el peso, para no spamear
     if (lastWeight === null || weight !== lastWeight) {
         lastWeight = weight;
-        console.log('⚖️  Peso leído:', weight, 'kg');
+        log.info('⚖️  Peso leído:', weight, 'kg');
     }
 
     // Lógica de estabilización
@@ -107,8 +117,8 @@ function handleWeightStability(weight) {
             // El peso se ha mantenido estable por STABILITY_DELAY ms
             if (weight !== stableWeight) {
                 stableWeight = weight;
-                console.log('✅ Peso estable:', stableWeight, 'kg');
-                console.log('📡 Enviando a clientes WebSocket...\n');
+                log.info('✅ Peso estable:', stableWeight, 'kg');
+                log.info('📡 Enviando a clientes WebSocket...\n');
 
                 // Emitir el peso estable a todos los clientes conectados
                 io.emit('stableWeight', {
@@ -123,18 +133,18 @@ function handleWeightStability(weight) {
 // Abrimos el puerto
 port.open((err) => {
     if (err) {
-        return console.error('❌ No se pudo abrir el puerto:', err.message);
+        return log.error('❌ No se pudo abrir el puerto:', err.message);
     }
 });
 
 // Configuración de Socket.IO
 io.on('connection', (socket) => {
-    console.log('🔌 Cliente WebSocket conectado:', socket.id);
-    console.log(`   Total de clientes conectados: ${io.engine.clientsCount}\n`);
+    log.info('🔌 Cliente WebSocket conectado:', socket.id);
+    log.info(`   Total de clientes conectados: ${io.engine.clientsCount}\n`);
 
     // Enviar el último peso estable al conectarse (si existe)
     if (stableWeight !== null) {
-        console.log(`📤 Enviando último peso estable (${stableWeight} kg) al nuevo cliente`);
+        log.info(`📤 Enviando último peso estable (${stableWeight} kg) al nuevo cliente`);
         socket.emit('stableWeight', {
             weight: stableWeight,
             timestamp: new Date().toISOString()
@@ -142,19 +152,20 @@ io.on('connection', (socket) => {
     }
 
     socket.on('disconnect', () => {
-        console.log('🔌 Cliente WebSocket desconectado:', socket.id);
-        console.log(`   Total de clientes conectados: ${io.engine.clientsCount}\n`);
+        log.info('🔌 Cliente WebSocket desconectado:', socket.id);
+        log.info(`   Total de clientes conectados: ${io.engine.clientsCount}\n`);
     });
 });
 
 // Iniciar servidor HTTP/WebSocket
 httpServer.listen(SERVER_PORT, () => {
-    console.log('═══════════════════════════════════════════════════');
-    console.log('🚀 Servidor de Peso Iniciado');
-    console.log('═══════════════════════════════════════════════════');
-    console.log(`📡 WebSocket en: ws://localhost:${SERVER_PORT}`);
-    console.log(`🌐 HTTP en: http://localhost:${SERVER_PORT}`);
-    console.log(`⚖️  Puerto serie: ${PORT_NAME}`);
-    console.log(`⏱️  Tiempo de estabilización: ${STABILITY_DELAY}ms`);
-    console.log('═══════════════════════════════════════════════════\n');
+    log.info('═══════════════════════════════════════════════════');
+    log.info('🚀 Servidor de Peso Iniciado');
+    log.info('═══════════════════════════════════════════════════');
+    log.info(`📡 WebSocket en: ws://localhost:${SERVER_PORT}`);
+    log.info(`🌐 HTTP en: http://localhost:${SERVER_PORT}`);
+    log.info(`⚖️  Puerto serie: ${PORT_NAME}`);
+    log.info(`⏱️  Tiempo de estabilización: ${STABILITY_DELAY}ms`);
+    log.info(`🔧 Modo: ${isDevelopment ? 'DESARROLLO' : 'PRODUCCIÓN'}`);
+    log.info('═══════════════════════════════════════════════════\n');
 });
