@@ -6,6 +6,8 @@
     "start": "node index.js",
     "dev": "set NODE_ENV=development && node index.js",
     "prod": "set NODE_ENV=production && node index.js",
+    "mock": "node index.js --mock",
+    "mock:500": "node index.js --mock=0.5",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
